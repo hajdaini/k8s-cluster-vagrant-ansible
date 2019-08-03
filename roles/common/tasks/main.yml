@@ -1,0 +1,69 @@
+- name: Install packages that allow apt to be used over HTTPS
+  apt: 
+    name='{{ item.name }}'
+    state=present
+    update_cache=yes
+  with_items: "{{ https_packages | default([]) }}"
+
+
+- name: Add new repositories keys
+  apt_key:
+    url='{{item.key}}'
+    state=present
+  with_items: "{{ gpg_keys | default([]) }}"
+
+
+- name: Add new apt repositories
+  apt_repository:
+    repo='{{item.repo}}'
+    state=present
+  with_items: "{{ repositories | default([]) }}"
+
+
+- name: Install docker
+  apt: 
+    name="{{ item.name }}"
+    state=present
+    update_cache=yes
+  with_items: "{{ docker_packages | default([]) }}"
+  notify:
+    - docker status
+
+
+- name: Add vagrant user to docker group
+  user:
+    name: vagrant
+    group: docker
+
+
+- name: Remove swapfile from /etc/fstab
+  mount:
+    name: "{{ item }}"
+    fstype: swap
+    state: absent
+  with_items:
+    - swap
+    - none
+
+
+- name: Disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+
+- name: Install Kubernetes binaries
+  apt: 
+    name="{{ item.name }}"
+    state=present
+    update_cache=yes
+  with_items: "{{ k8s_packages | default([]) }}"
+
+- name: Configure node ip
+  lineinfile:
+    path: '/etc/systemd/system/kubelet.service.d/10-kubeadm.conf'
+    line: 'Environment="KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}"'
+    regexp: 'KUBELET_EXTRA_ARGS='
+    insertafter: '\[Service\]'
+    state: present
+  notify:
+    - restart kubelet

@@ -1,0 +1,9 @@
+- hosts: masters
+  become: yes
+  roles:
+    - { role: master}   
+
+- hosts: workers
+  become: yes
+  roles:
+    - { role: worker} 
