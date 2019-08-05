@@ -14,31 +14,33 @@ POD_NETWORK = "192.168.100.0/16"    # Private network for inter-pod communicatio
 Vagrant.configure("2") do |config|
     config.ssh.insert_key = false
 
-    # Configuration de la RAM et CPU
+    # RAM and CPU config
     config.vm.provider "virtualbox" do |v|
         v.memory = MEM
         v.cpus = CPU
     end
 
-    # Création et configuration des noeuds de type master
+    # Master node config
     config.vm.define MASTER_NAME do |master|
-        # Configuration de la VM
+        
+        # Hostname and network config
         master.vm.box = IMAGE_NAME
         master.vm.network "private_network", ip: "#{NODE_NETWORK_BASE}.10"
         master.vm.hostname = MASTER_NAME
 
-        # Lancement + paramétrage du playbook Ansible
+        # Ansible role setting
         master.vm.provision "ansible" do |ansible|
-            # Rôle Ansible qui sera lancé
+            
+            # Ansbile role that will be launched
             ansible.playbook = "roles/main.yml"
 
-            # Groupes d'hôtes de l'inventaire Ansible 
+            # Groups in Ansible inventory
             ansible.groups = {
                 "masters" => ["#{MASTER_NAME}"],
                 "workers" => ["worker-[1:#{WORKER_NBR}]"]
             }
 
-            # Surchargement des variables par défaut du playbook Ansible
+            # Overload Anqible variables
             ansible.extra_vars = {
                 node_ip: "#{NODE_NETWORK_BASE}.10",
                 node_name: "master",
@@ -47,32 +49,32 @@ Vagrant.configure("2") do |config|
         end
     end
 
-    # Création et configuration des noeuds de type worker
+    # Worker node config
     (1..WORKER_NBR).each do |i|
         config.vm.define "worker-#{i}" do |worker|
 
-            # Configuration de la VM
+            # Hostname and network config
             worker.vm.box = IMAGE_NAME
             worker.vm.network "private_network", ip: "#{NODE_NETWORK_BASE}.#{i + 10}"
             worker.vm.hostname = "worker-#{i}"
 
-            # Lancement + paramétrage du playbook Ansible
+            # Ansible role setting
             worker.vm.provision "ansible" do |ansible|
 
-                # Rôle Ansible qui sera lancé
+                # Ansbile role that will be launched
                 ansible.playbook = "roles/main.yml"
 
-                # Groupes d'hôtes de l'inventaire Ansible 
+                # Groups in Ansible inventory
                 ansible.groups = {
                     "masters" => ["#{MASTER_NAME}"],
                     "workers" => ["worker-[1:#{WORKER_NBR}]"]
                 }
 
-                # Surchargement des variables par défaut du playbook Ansible
+                # Overload Anqible variables
                 ansible.extra_vars = {
                     node_ip: "#{NODE_NETWORK_BASE}.#{i + 10}"
                 }
             end
         end
     end
-end   
+end
